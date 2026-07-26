@@ -6,14 +6,22 @@ pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {
-    [] -> home_page(req)
+    ["api", "search"] -> search(req)
+    ["api", "create"] -> create(req)
 
     _ -> wisp.not_found()
   }
 }
 
-fn home_page(req: Request) -> Response {
+fn search(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
+
+  wisp.ok()
+  |> wisp.html_body("Hello, Mike!")
+}
+
+fn create(req: Request) -> Response {
+  use <- wisp.require_method(req, Post)
 
   wisp.ok()
   |> wisp.html_body("Hello, Mike!")

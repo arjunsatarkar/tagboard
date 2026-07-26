@@ -1,52 +1,54 @@
 :root {
-    --outer-padding: 1rem;
+	--outer-padding: 1rem;
 }
 
-html, body {
-    margin: 0;
-    padding: 0;
+html,
+body {
+	margin: 0;
+	padding: 0;
 }
 
 * {
-    box-sizing: border-box;
+	box-sizing: border-box;
 }
 
 div.app > * {
-    padding-left: var(--outer-padding);
-    padding-right: var(--outer-padding);
+	padding-left: var(--outer-padding);
+	padding-right: var(--outer-padding);
 }
 
 @media (min-width: 960px) {
-    div.app {
-        display: flex;
-    }
+	div.app {
+		display: flex;
+	}
 
-    div.app > * {
-        flex: 1;
-    }
+	div.app > * {
+		flex: 1;
+	}
 
-    .sidebar {
-        border-right: 1px solid black;
-        max-width: 18dvw;
-    }
+	.sidebar {
+		border-right: 1px solid black;
+		max-width: 18dvw;
+	}
 
-    .sidebar > * {
-        display: block;
-    }
+	.sidebar > * {
+		display: block;
+	}
 }
 
 @media not (min-width: 960px) {
-    .sidebar {
-        display: flex;
-        gap: 1em;
-        justify-content: center;
-    }
+	.sidebar {
+		display: flex;
+		gap: 1em;
+		justify-content: center;
+	}
 }
 
 .sidebar {
-    padding-top: var(--outer-padding);
+	padding-top: var(--outer-padding);
 }
 
-.sidebar a:link, .sidebar a:visited {
-    color: #0000ee;
+.sidebar a:link,
+.sidebar a:visited {
+	color: #0000ee;
 }

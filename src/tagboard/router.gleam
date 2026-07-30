@@ -27,7 +27,7 @@ fn serve_frontend(req: Request, ctx: Context) -> Response {
   let found_path = {
     use path <- result.try(uri.percent_decode(req.path))
     // filepath.expand is documented to not go up past the root of the given path, i.e. the expanded path will have no .. in it
-    // This prevents directory traversal vulnerabilities
+    // This prevents directory traversal vulnerabilities when the path is appended to ctx.static_directory
     use path <- result.try(filepath.expand(path))
     let path = ctx.static_directory <> path
     case simplifile.is_file(path) {

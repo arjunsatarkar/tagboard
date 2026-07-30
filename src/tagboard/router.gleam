@@ -3,6 +3,7 @@ import gleam/http.{Get, Post}
 import gleam/list
 import gleam/option
 import gleam/result
+import gleam/string
 import gleam/uri
 import marceau
 import simplifile
@@ -24,39 +25,46 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
 fn serve_frontend(req: Request, ctx: Context) -> Response {
   use <- wisp.require_method(req, Get)
 
-  let found_path = {
-    use path <- result.try(uri.percent_decode(req.path))
-    // filepath.expand is documented to not go up past the root of the given path, i.e. the expanded path will have no .. in it
-    // This prevents directory traversal vulnerabilities when the path is appended to ctx.static_directory
-    use path <- result.try(filepath.expand(path))
-    let path = ctx.static_directory <> path
-    case simplifile.is_file(path) {
-      Ok(True) -> {
-        Ok(path)
-      }
-      Ok(False) -> {
-        let path = path <> "/index.html"
+  case string.ends_with(req.path, "/index.html") {
+    True ->
+      // We don't remove the slash before the filename
+      wisp.permanent_redirect(string.remove_suffix(req.path, "index.html"))
+    False -> {
+      let file_path = {
+        use path <- result.try(uri.percent_decode(req.path))
+        // filepath.expand is documented to not go up past the root of the given path, i.e. the expanded path will have no .. in it
+        // This prevents directory traversal vulnerabilities when the path is appended to ctx.static_directory
+        use path <- result.try(filepath.expand(path))
+        let path = ctx.static_directory <> path
         case simplifile.is_file(path) {
-          Ok(True) -> Ok(path)
+          Ok(True) -> {
+            Ok(path)
+          }
+          Ok(False) -> {
+            let path = path <> "/index.html"
+            case simplifile.is_file(path) {
+              Ok(True) -> Ok(path)
+              _ -> Error(Nil)
+            }
+          }
+
           _ -> Error(Nil)
         }
       }
 
-      _ -> Error(Nil)
+      case file_path {
+        Ok(file_path) ->
+          wisp.ok()
+          |> wisp.set_header(
+            "content-type",
+            filepath.extension(file_path)
+              |> result.unwrap("")
+              |> marceau.extension_to_mime_type(),
+          )
+          |> wisp.set_body(File(file_path, 0, option.None))
+        Error(_) -> wisp.not_found()
+      }
     }
-  }
-
-  case found_path {
-    Ok(path) ->
-      wisp.ok()
-      |> wisp.set_header(
-        "content-type",
-        filepath.extension(path)
-          |> result.unwrap("")
-          |> marceau.extension_to_mime_type(),
-      )
-      |> wisp.set_body(File(path, 0, option.None))
-    Error(_) -> wisp.not_found()
   }
 }
 

@@ -1,4 +1,5 @@
 import filepath
+import gleam/bool
 import gleam/http.{Get, Post}
 import gleam/list
 import gleam/option
@@ -25,46 +26,48 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
 fn serve_frontend(req: Request, ctx: Context) -> Response {
   use <- wisp.require_method(req, Get)
 
-  case string.ends_with(req.path, "/index.html") {
-    True ->
-      // We don't remove the slash before the filename
-      wisp.permanent_redirect(string.remove_suffix(req.path, "index.html"))
-    False -> {
-      let file_path = {
-        use path <- result.try(uri.percent_decode(req.path))
-        // filepath.expand is documented to not go up past the root of the given path, i.e. the expanded path will have no .. in it
-        // This prevents directory traversal vulnerabilities when the path is appended to ctx.static_directory
-        use path <- result.try(filepath.expand(path))
-        let path = ctx.static_directory <> path
-        case simplifile.is_file(path) {
-          Ok(True) -> {
-            Ok(path)
-          }
-          Ok(False) -> {
-            let path = path <> "/index.html"
-            case simplifile.is_file(path) {
-              Ok(True) -> Ok(path)
-              _ -> Error(Nil)
-            }
-          }
+  // We don't strip the slash before the file name
+  use <- bool.guard(
+    when: string.ends_with(req.path, "/index.html"),
+    return: wisp.permanent_redirect(string.remove_suffix(req.path, "index.html")),
+  )
 
+  let file_path = {
+    use path <- result.try(uri.percent_decode(req.path))
+    // filepath.expand is documented to not go up past the root of the given path, i.e. the expanded path will have no .. in it
+    // This prevents directory traversal vulnerabilities when the path is appended to ctx.static_directory
+    use path <- result.try(filepath.expand(path))
+    let path = ctx.static_directory <> path
+    case simplifile.is_file(path) {
+      Ok(True) -> {
+        Ok(path)
+      }
+      Ok(False) -> {
+        let path = path <> "/index.html"
+        case simplifile.is_file(path) {
+          Ok(True) -> Ok(path)
           _ -> Error(Nil)
         }
       }
 
-      case file_path {
-        Ok(file_path) ->
-          wisp.ok()
-          |> wisp.set_header(
-            "content-type",
-            filepath.extension(file_path)
-              |> result.unwrap("")
-              |> marceau.extension_to_mime_type(),
-          )
-          |> wisp.set_body(File(file_path, 0, option.None))
-        Error(_) -> wisp.not_found()
-      }
+      _ -> Error(Nil)
     }
+  }
+
+  case file_path {
+    Ok(file_path) ->
+      wisp.ok()
+      |> wisp.set_header(
+        "content-type",
+        filepath.extension(file_path)
+          |> result.unwrap("")
+          |> marceau.extension_to_mime_type(),
+      )
+      |> wisp.set_body(File(file_path, 0, option.None))
+    Error(_) ->
+      wisp.not_found()
+      |> wisp.set_body(File(ctx.static_directory <> "/404.html", 0, option.None))
+      |> wisp.set_header("content-type", "text/html; charset=utf-8")
   }
 }
 

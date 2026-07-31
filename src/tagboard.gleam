@@ -1,6 +1,7 @@
 import gleam/dict
 import gleam/erlang/process
 import gleam/list
+import gleam/regexp
 import gleam/result
 import gleam/string
 import mist
@@ -18,10 +19,12 @@ pub fn main() {
 
   let assert Ok(priv_directory) = wisp.priv_directory("tagboard")
   let static_file_path = priv_directory <> "/tagboard-frontend/build"
+  let assert Ok(trailing_slash_regexp) = regexp.from_string("\\/+$")
   let ctx =
     Context(
       static_file_mapping: get_static_file_mapping(static_file_path),
       not_found_path: static_file_path <> "/404.html",
+      trailing_slash_regexp: trailing_slash_regexp,
     )
 
   let handler = router.handle_request(_, ctx)

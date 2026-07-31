@@ -1,6 +1,11 @@
+import gleam/dict
 import gleam/erlang/process
+import gleam/list
+import gleam/result
+import gleam/string
 import mist
-import tagboard/context.{Context}
+import simplifile
+import tagboard/context.{type StaticFileMapping, Context}
 import tagboard/router
 import wisp
 import wisp/wisp_mist
@@ -12,8 +17,12 @@ pub fn main() {
   let secret_key_base = wisp.random_string(64)
 
   let assert Ok(priv_directory) = wisp.priv_directory("tagboard")
+  let static_file_path = priv_directory <> "/tagboard-frontend/build"
   let ctx =
-    Context(static_directory: priv_directory <> "/tagboard-frontend/build")
+    Context(
+      static_file_mapping: get_static_file_mapping(static_file_path),
+      not_found_path: static_file_path <> "/404.html",
+    )
 
   let handler = router.handle_request(_, ctx)
 
@@ -24,4 +33,26 @@ pub fn main() {
     |> mist.start
 
   process.sleep_forever()
+}
+
+fn get_static_file_mapping(static_directory: String) -> StaticFileMapping {
+  let assert Ok(files) = simplifile.get_files(in: static_directory)
+  files
+  |> list.filter_map(fn(path) {
+    // The order of the string operations is load-bearing
+    let relative_path =
+      path
+      |> string.remove_suffix("/index.html")
+      |> string.remove_prefix(static_directory)
+      |> string.remove_prefix("/")
+    use path_segments <- result.try(
+      case relative_path == "404.html", string.is_empty(relative_path) {
+        True, _ -> Error(Nil)
+        False, True -> Ok([])
+        False, False -> Ok(string.split(relative_path, on: "/"))
+      },
+    )
+    Ok(#(path_segments, path))
+  })
+  |> dict.from_list()
 }

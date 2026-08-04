@@ -27,31 +27,25 @@ fn redirect_trailing_slashes(
   ctx: Context,
   handle_request: fn(wisp.Request) -> wisp.Response,
 ) -> response.Response(wisp.Body) {
-  case construct_path_without_trailing_slashes(req.path, ctx) {
-    Ok(new_path) -> wisp.permanent_redirect(new_path)
-    Error(Nil) -> handle_request(req)
+  case replace_trailing_slashes(req.path, ctx) {
+    #(_, False) -> handle_request(req)
+    #(new_path, True) -> wisp.permanent_redirect(new_path)
   }
 }
 
-/// If path has trailing slashes (and is not the root path "/"), remove them and return the
-/// new path wrapped in an Ok(), except if we would return an empty string we return "/" instead.
-/// 
-/// If path has no removable trailing slashes, return Error(nil).
-/// 
-/// The use of a Result return is to help the caller decide whether to redirect.
-fn construct_path_without_trailing_slashes(
-  path: String,
-  ctx: Context,
-) -> Result(String, Nil) {
+/// Return the path without any removable trailing slashes
+/// The second element in the tuple is whether it is necessary to redirect,
+/// i.e. whether anything changed.
+fn replace_trailing_slashes(path: String, ctx: Context) -> #(String, Bool) {
   case path != "/" && string.ends_with(path, "/") {
     True -> {
       let replaced =
         regexp.replace(ctx.trailing_slash_regexp, in: path, with: "")
       case replaced {
-        "" -> Ok("/")
-        _ -> Ok(replaced)
+        "" -> #("/", True)
+        _ -> #(replaced, True)
       }
     }
-    False -> Error(Nil)
+    False -> #(path, False)
   }
 }

@@ -1,10 +1,13 @@
+import dream_config/loader as config
 import gleam/dict
 import gleam/erlang/process
 import gleam/list
+import gleam/otp/static_supervisor as supervisor
 import gleam/regexp
 import gleam/result
 import gleam/string
 import mist
+import pog
 import simplifile
 import tagboard/context.{type StaticFileMapping, Context}
 import tagboard/router
@@ -14,14 +17,29 @@ import wisp/wisp_mist
 pub fn main() {
   wisp.configure_logger()
 
-  // TODO: load from config/env/whatever
-  let secret_key_base = wisp.random_string(64)
+  let assert Ok(_) = config.load_dotenv()
+
+  let assert Ok(db_connection_uri) = config.get_required("DB_CONNECTION_URI")
+  let assert Ok(secret_key_base) = config.get_required("SECRET_KEY_BASE")
+
+  let pool_name = process.new_name("pog_db_pool")
+
+  let assert Ok(db_config) = pog.url_config(pool_name, db_connection_uri)
+  let pool_child =
+    db_config
+    |> pog.supervised
+
+  let assert Ok(_) =
+    supervisor.new(supervisor.RestForOne)
+    |> supervisor.add(pool_child)
+    |> supervisor.start
 
   let assert Ok(priv_directory) = wisp.priv_directory("tagboard")
   let static_file_path = priv_directory <> "/tagboard-frontend/build"
   let assert Ok(trailing_slash_regexp) = regexp.from_string("\\/+$")
   let ctx =
     Context(
+      db: pog.named_connection(pool_name),
       static_file_mapping: get_static_file_mapping(static_file_path),
       not_found_path: static_file_path <> "/404.html",
       trailing_slash_regexp: trailing_slash_regexp,

@@ -15,7 +15,7 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
   let path_segments = wisp.path_segments(req)
   case path_segments {
     ["api", "search"] -> search(req)
-    ["api", "create"] -> create(req)
+    ["api", "create"] -> create(req, ctx)
     ["api", ..] -> wisp.not_found()
 
     _ ->
@@ -48,20 +48,20 @@ fn search(req: Request) -> Response {
   |> wisp.html_body("Hello, Mike!")
 }
 
-fn create(req: Request) -> Response {
+fn create(req: Request, ctx: Context) -> Response {
   use <- wisp.require_method(req, Post)
 
   use formdata <- wisp.require_form(req)
   let result = {
     use uri <- result.try(list.key_find(formdata.values, "uri"))
     use tags_string <- result.try(list.key_find(formdata.values, "tags_string"))
-    Ok(uri <> tags_string)
+    Ok(#(uri, tags_string))
   }
 
   case result {
-    Ok(content) -> {
+    Ok(#(uri, tags_string)) -> {
       wisp.ok()
-      |> wisp.html_body("Hello " <> content)
+      |> wisp.html_body("Hello " <> uri <> tags_string)
     }
     Error(_) -> {
       wisp.bad_request("Invalid form")

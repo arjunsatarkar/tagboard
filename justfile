@@ -6,3 +6,6 @@ build: build-frontend
 
 build-frontend:
     cd priv/tagboard-frontend && pnpm run build
+
+migrate:
+    gleam run -m migrate

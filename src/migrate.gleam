@@ -26,16 +26,16 @@ pub fn main() {
   let db = pog.named_connection(pool_name)
   let assert Ok(_) =
     pog.query(
-      "CREATE TABLE IF NOT EXISTS items(
+      "CREATE TABLE IF NOT EXISTS items (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         uri TEXT UNIQUE NOT NULL,
-        tags BIGINT ARRAY
+        tags BIGINT ARRAY NOT NULL DEFAULT '{}'
        )",
     )
     |> pog.execute(db)
   let assert Ok(_) =
     pog.query(
-      "CREATE INDEX IF NOT EXISTS idx_gin__items__tags on items USING gin(tags)",
+      "CREATE INDEX IF NOT EXISTS idx_gin__items__tags ON items USING gin(tags)",
     )
     |> pog.execute(db)
 }

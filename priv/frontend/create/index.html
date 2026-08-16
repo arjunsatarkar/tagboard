@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/assets/index.css">
+    <title>Create | Tagboard</title>
+</head>
+<body>
+<div class="app">
+	<nav class="sidebar">
+		<span><a href="/">home</a></span>
+		<span><a href="/browse">browse</a></span>
+		<span><a href="/create">create</a></span>
+		<span><a href="/about">about</a></span>
+	</nav>
+	<div class="mainContent">
+                <h1>Create</h1>
+        <form action="/api/create" method="post">
+            <label>URI: <input name="uri" /></label><br>
+            <label>Tags: <input name="tags_string" /></label><br />
+            <button>Create</button>
+        </form>
+	</div>
+</div>
+</body>
+</html>

@@ -35,7 +35,7 @@ pub fn main() {
     |> supervisor.start
 
   let assert Ok(priv_directory) = wisp.priv_directory("tagboard")
-  let static_file_path = priv_directory <> "/tagboard-frontend/build"
+  let static_file_path = priv_directory <> "/frontend"
   let assert Ok(trailing_slash_regexp) = regexp.from_string("\\/+$")
   let ctx =
     Context(

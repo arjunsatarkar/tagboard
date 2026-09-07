@@ -1,11 +1,10 @@
 {
-  "name": "tagboard-frontend",
+  "name": "tagboard",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "format": "prettier --write ."
+    "format": "gleam format && prettier --write . && find priv/frontend -name '*.handles' -exec uvx djlint --reformat --warn {} +"
   },
   "keywords": [],
   "author": "",
@@ -17,9 +16,6 @@
     }
   },
   "type": "module",
-  "dependencies": {
-    "handlebars": "^4.7.9"
-  },
   "devDependencies": {
     "prettier": "3.9.6"
   }

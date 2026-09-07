@@ -12,17 +12,17 @@ body {
   box-sizing: border-box;
 }
 
-div.app > * {
+.app > * {
   padding-left: var(--outer-padding);
   padding-right: var(--outer-padding);
 }
 
 @media (min-width: 960px) {
-  div.app {
+  .app {
     display: flex;
   }
 
-  div.app > * {
+  .app > * {
     flex: 1;
   }
 

@@ -6,6 +6,7 @@
 ```sh
 gleam add tagboard@1
 ```
+
 ```gleam
 import tagboard
 

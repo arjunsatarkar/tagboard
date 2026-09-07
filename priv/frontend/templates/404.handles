@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {{> head_boilerplate .}}
+        <title>Page Not Found</title>
+    </head>
+    <body class="app">
+        {{> sidebar . }}
+        <main>
+            Page not found.
+        </main>
+    </body>
+</html>

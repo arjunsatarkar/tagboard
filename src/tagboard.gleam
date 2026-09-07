@@ -1,15 +1,17 @@
 import dream_config/loader as config
-import gleam/dict
+import filepath
+import gleam/dict.{type Dict}
 import gleam/erlang/process
 import gleam/list
 import gleam/otp/static_supervisor as supervisor
-import gleam/regexp
 import gleam/result
-import gleam/string
+import gleam/string_tree
+import handles
+import handles/ctx as handles_ctx
 import mist
 import pog
 import simplifile
-import tagboard/context.{type StaticFileMapping, Context}
+import tagboard/context.{type TemplateMapping, Context}
 import tagboard/router
 import wisp
 import wisp/wisp_mist
@@ -35,14 +37,15 @@ pub fn main() {
     |> supervisor.start
 
   let assert Ok(priv_directory) = wisp.priv_directory("tagboard")
-  let static_file_path = priv_directory <> "/frontend"
-  let assert Ok(trailing_slash_regexp) = regexp.from_string("\\/+$")
+  let #(templates, partials) =
+    prepare_templates(filepath.join(priv_directory, "frontend"))
   let ctx =
     Context(
       db: pog.named_connection(pool_name),
-      static_file_mapping: get_static_file_mapping(static_file_path),
-      not_found_path: static_file_path <> "/404.html",
-      trailing_slash_regexp: trailing_slash_regexp,
+      templates: templates,
+      partials: partials,
+      static_pages: prepare_static_pages(templates, partials),
+      assets_dir: filepath.join(priv_directory, "frontend/assets"),
     )
 
   let handler = router.handle_request(_, ctx)
@@ -56,24 +59,50 @@ pub fn main() {
   process.sleep_forever()
 }
 
-fn get_static_file_mapping(static_directory: String) -> StaticFileMapping {
-  let assert Ok(files) = simplifile.get_files(in: static_directory)
-  files
-  |> list.filter_map(fn(path) {
-    // The order of the string operations is load-bearing
-    let relative_path =
-      path
-      |> string.remove_suffix("/index.html")
-      |> string.remove_prefix(static_directory)
-      |> string.remove_prefix("/")
-    use path_segments <- result.try(
-      case relative_path == "404.html", string.is_empty(relative_path) {
-        True, _ -> Error(Nil)
-        False, True -> Ok([])
-        False, False -> Ok(string.split(relative_path, on: "/"))
-      },
-    )
-    Ok(#(path_segments, path))
+fn prepare_templates(
+  template_directory: String,
+) -> #(TemplateMapping, List(#(String, handles.Template))) {
+  let partials =
+    process_template_dir(filepath.join(template_directory, "partials"))
+  let templates =
+    process_template_dir(filepath.join(template_directory, "templates"))
+    |> dict.from_list()
+
+  #(templates, partials)
+}
+
+fn prepare_static_pages(
+  templates: TemplateMapping,
+  partials: List(#(String, handles.Template)),
+) -> Dict(String, String) {
+  ["home", "create", "404"]
+  |> list.map(fn(name) {
+    let assert Ok(template) = dict.get(templates, name)
+    let assert Ok(template_result) =
+      handles.run(template, handles_ctx.Dict([]), partials)
+    #(name, string_tree.to_string(template_result))
   })
-  |> dict.from_list()
+  |> dict.from_list
+}
+
+// The error handling should really be better but since none of this is user-controlled
+// it's fine for now.
+fn process_template_dir(dir: String) -> List(#(String, handles.Template)) {
+  let assert Ok(paths) = simplifile.get_files(dir)
+
+  let assert Ok(result) =
+    paths
+    |> list.map(fn(path) {
+      use contents <- result.try(
+        simplifile.read(path) |> result.replace_error(Nil),
+      )
+      use prepared <- result.try(
+        handles.prepare(contents) |> result.replace_error(Nil),
+      )
+
+      Ok(#(path |> filepath.base_name() |> filepath.strip_extension(), prepared))
+    })
+    |> result.all()
+
+  result
 }

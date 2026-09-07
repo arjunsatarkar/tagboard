@@ -1,15 +1,16 @@
 import gleam/dict.{type Dict}
-import gleam/regexp.{type Regexp}
+import handles
 import pog
 
 pub type Context {
   Context(
     db: pog.Connection,
-    static_file_mapping: StaticFileMapping,
-    not_found_path: String,
-    trailing_slash_regexp: Regexp,
+    templates: TemplateMapping,
+    partials: List(#(String, handles.Template)),
+    static_pages: Dict(String, String),
+    assets_dir: String,
   )
 }
 
-pub type StaticFileMapping =
-  Dict(List(String), String)
+pub type TemplateMapping =
+  Dict(String, handles.Template)

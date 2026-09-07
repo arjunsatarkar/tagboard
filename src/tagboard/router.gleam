@@ -1,58 +1,59 @@
-import filepath
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/http.{Get, Post}
 import gleam/list
-import gleam/option
 import gleam/result
 import gleam/string
 import gleam/uri
-import marceau
 import pog
 import tagboard/context.{type Context}
 import tagboard/web
-import wisp.{type Request, type Response, File}
+import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
   use req <- web.middleware(req, ctx)
 
+  let assert Ok(not_found_page) = dict.get(ctx.static_pages, "404")
+
   let path_segments = wisp.path_segments(req)
   case path_segments {
-    ["api", "search"] -> search(req)
-    ["api", "create"] -> create(req, ctx)
+    [] -> home(req, ctx)
+    ["create"] -> create(req, ctx)
+
+    ["api", "search"] -> api_search(req)
+    ["api", "create"] -> api_create(req, ctx)
     ["api", ..] -> wisp.not_found()
 
     _ ->
-      case dict.get(ctx.static_file_mapping, path_segments) {
-        Ok(file_path) -> serve_frontend(req, file_path)
-        Error(_) ->
-          wisp.not_found()
-          |> wisp.set_body(File(ctx.not_found_path, 0, option.None))
-          |> wisp.set_header("content-type", "text/html; charset=utf-8")
-      }
+      wisp.not_found()
+      |> wisp.html_body(not_found_page)
   }
 }
 
-fn serve_frontend(req: Request, file_path: String) -> Response {
+fn home(req: Request, ctx: Context) -> Response {
+  let assert Ok(page) = dict.get(ctx.static_pages, "home")
+
   use <- wisp.require_method(req, Get)
   wisp.ok()
-  |> wisp.set_header(
-    "content-type",
-    filepath.extension(file_path)
-      |> result.unwrap("")
-      |> marceau.extension_to_mime_type(),
-  )
-  |> wisp.set_body(File(file_path, 0, option.None))
+  |> wisp.html_body(page)
 }
 
-fn search(req: Request) -> Response {
+fn create(req: Request, ctx: Context) -> Response {
+  let assert Ok(page) = dict.get(ctx.static_pages, "create")
+
+  use <- wisp.require_method(req, Get)
+  wisp.ok()
+  |> wisp.html_body(page)
+}
+
+fn api_search(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   wisp.ok()
   |> wisp.html_body("Hello, Mike!")
 }
 
-fn create(req: Request, ctx: Context) -> Response {
+fn api_create(req: Request, ctx: Context) -> Response {
   use <- wisp.require_method(req, Post)
 
   use formdata <- wisp.require_form(req)

@@ -1,13 +1,13 @@
-run: build-frontend
+run:
     gleam run
 
-build: build-frontend
+build:
     gleam build
 
-build-frontend:
-    mkdir -p priv/frontend
-    cd tagboard-frontend && node index
-    rsync --archive tagboard-frontend/build/* priv/frontend
+format:
+    gleam format
+    pnpm exec prettier --write .
+    find priv/frontend -name '*.handles' -exec uvx djlint --reformat --warn {} +
 
 migrate:
     gleam run -m migrate

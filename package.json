@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "format": "gleam format && prettier --write . && find priv/frontend -name '*.handles' -exec uvx djlint --reformat --warn {} +"
-  },
+  "scripts": {},
   "keywords": [],
   "author": "",
   "devEngines": {

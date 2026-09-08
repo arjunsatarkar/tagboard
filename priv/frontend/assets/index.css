@@ -12,43 +12,43 @@ body {
   box-sizing: border-box;
 }
 
-.app > * {
+#app > * {
   padding-left: var(--outer-padding);
   padding-right: var(--outer-padding);
 }
 
 @media (min-width: 960px) {
-  .app {
+  #app {
     display: flex;
   }
 
-  .app > * {
+  #app > * {
     flex: 1;
   }
 
-  .sidebar {
+  #sidebar {
     border-right: 1px solid black;
     max-width: 18dvw;
   }
 
-  .sidebar > * {
+  #sidebar > * {
     display: block;
   }
 }
 
 @media not (min-width: 960px) {
-  .sidebar {
+  #sidebar {
     display: flex;
     gap: 1em;
     justify-content: center;
   }
 }
 
-.sidebar {
+#sidebar {
   padding-top: var(--outer-padding);
 }
 
-.sidebar a:link,
-.sidebar a:visited {
+#sidebar a:link,
+#sidebar a:visited {
   color: #0000ee;
 }

@@ -24,18 +24,34 @@ pub fn main() {
     |> supervisor.start
 
   let db = pog.named_connection(pool_name)
+  // TODO: pog doesn't support TIMESTAMPTZ, its lead dev seems to think it's not
+  // necessary - verify if it's possible to always interpret TIMESTAMP as UTC
   let assert Ok(_) =
     pog.query(
       "CREATE TABLE IF NOT EXISTS items (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         uri TEXT UNIQUE NOT NULL,
-        tags BIGINT ARRAY NOT NULL DEFAULT '{}'
+        tags BIGINT ARRAY NOT NULL DEFAULT '{}',
+        created_at TIMESTAMP NOT NULL,
+        modified_at TIMESTAMP NOT NULL
        )",
     )
     |> pog.execute(db)
   let assert Ok(_) =
     pog.query(
       "CREATE INDEX IF NOT EXISTS idx_gin__items__tags ON items USING gin(tags)",
+    )
+    |> pog.execute(db)
+
+  let assert Ok(_) =
+    pog.query(
+      "CREATE INDEX IF NOT EXISTS idx__items__created_at ON items (created_at)",
+    )
+    |> pog.execute(db)
+
+  let assert Ok(_) =
+    pog.query(
+      "CREATE INDEX IF NOT EXISTS idx__items__modified_at ON items (modified_at)",
     )
     |> pog.execute(db)
 }

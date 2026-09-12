@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {{> head_boilerplate . }}
+        <title>Search | Tagboard</title>
+    </head>
+    <body id="app">
+        {{> sidebar . }}
+        <main>
+            <h1>Search</h1>
+            <ol>
+                {{#each matching_item}}
+                    <li>
+                        <a href="{{ uri }}">{{ uri }}</a>
+                        <br>
+                        <code>{{ tags_string }}</code>
+                    </li>
+                {{/each}}
+            </ol>
+        </main>
+    </body>
+</html>

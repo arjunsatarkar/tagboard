@@ -85,8 +85,8 @@ fn prepare_static_pages(
   |> dict.from_list
 }
 
-// The error handling should really be better but since none of this is user-controlled
-// it's fine for now.
+// TODO: The error handling should really be better, although it's not a
+// major problem since none of this is user-controlled.
 fn process_template_dir(dir: String) -> List(#(String, handles.Template)) {
   let assert Ok(paths) = simplifile.get_files(dir)
 

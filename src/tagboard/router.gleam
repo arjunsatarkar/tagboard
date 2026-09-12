@@ -1,12 +1,15 @@
 import gleam/dict
-import gleam/dynamic/decode
 import gleam/http.{Get, Post}
 import gleam/list
 import gleam/result
-import gleam/string
-import gleam/uri
+import gleam/string_tree
+import gleam/time/timestamp
+import handles
+import handles/ctx as handles_ctx
 import pog
 import tagboard/context.{type Context}
+import tagboard/sql
+import tagboard/utils
 import tagboard/web
 import wisp.{type Request, type Response}
 
@@ -19,8 +22,8 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
   case path_segments {
     [] -> home(req, ctx)
     ["create"] -> create(req, ctx)
+    ["search"] -> search(req, ctx)
 
-    ["api", "search"] -> api_search(req)
     ["api", "create"] -> api_create(req, ctx)
     ["api", ..] -> wisp.not_found()
 
@@ -46,51 +49,70 @@ fn create(req: Request, ctx: Context) -> Response {
   |> wisp.html_body(page)
 }
 
-fn api_search(req: Request) -> Response {
+fn search(req: Request, ctx: Context) -> Response {
   use <- wisp.require_method(req, Get)
 
+  let query_params = wisp.get_query(req)
+
+  let tags =
+    case list.key_find(query_params, "tags_string") {
+      Ok(tags_string) -> tags_string
+      Error(_) -> ""
+    }
+    |> utils.parse_tags_string()
+
+  let assert Ok(tag_ids_query_returned) = sql.get_tag_ids(ctx.db, tags)
+  let tag_ids = tag_ids_query_returned.rows |> list.map(fn(row) { row.id })
+
+  let assert Ok(search_query_returned) = sql.search_by_tags(ctx.db, tag_ids)
+
+  let matching_items_handles =
+    handles_ctx.List(
+      search_query_returned.rows
+      |> list.map(fn(row) {
+        handles_ctx.Dict([
+          handles_ctx.Prop("uri", handles_ctx.Str(row.uri)),
+          handles_ctx.Prop(
+            "tags_string",
+            handles_ctx.Str(utils.create_tags_string_from_tag_uris(row.array)),
+          ),
+        ])
+      }),
+    )
+  let assert Ok(search_template) = dict.get(ctx.templates, "search")
+  let assert Ok(rendered) =
+    handles.run(
+      search_template,
+      handles_ctx.Dict([
+        handles_ctx.Prop("matching_item", matching_items_handles),
+      ]),
+      ctx.partials,
+    )
   wisp.ok()
-  |> wisp.html_body("Hello, Mike!")
+  |> wisp.html_body(string_tree.to_string(rendered))
 }
 
 fn api_create(req: Request, ctx: Context) -> Response {
   use <- wisp.require_method(req, Post)
 
+  let now = timestamp.system_time()
+
   use formdata <- wisp.require_form(req)
-  let result = {
+  let form_result = {
     use uri <- result.try(list.key_find(formdata.values, "uri"))
     use tags_string <- result.try(list.key_find(formdata.values, "tags_string"))
     Ok(#(uri, tags_string))
   }
 
-  case result {
+  case form_result {
     Ok(#(uri, tags_string)) -> {
-      let insert_new_tags_query =
-        pog.query(
-          "WITH r AS (
-            INSERT INTO items(uri) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id
-           ) SELECT * FROM r UNION SELECT id FROM items WHERE uri=$1
-           ",
-        )
-        |> pog.returning({
-          use id <- decode.field(0, decode.int)
-          decode.success(id)
-        })
-
       let assert Ok(insert_new_tags_returns) =
         tags_string
-        |> string.split(" ")
-        |> list.map(uri.percent_encode)
-        |> list.map(fn(percent_encoded) {
-          pog.parameter(
-            insert_new_tags_query,
-            pog.text("tagboard-tag:" <> percent_encoded),
-          )
-        })
-        |> list.map(pog.execute(_, ctx.db))
+        |> utils.parse_tags_string()
+        |> list.map(fn(tag) { sql.insert_new_tag(ctx.db, tag, now, now) })
         |> result.all()
 
-      let assert Ok(tag_ids) =
+      let assert Ok(tag_id_rows) =
         insert_new_tags_returns
         |> list.map(fn(returned) {
           case returned.rows {
@@ -100,11 +122,9 @@ fn api_create(req: Request, ctx: Context) -> Response {
         })
         |> result.all()
 
-      let insert_item_result =
-        pog.query("INSERT INTO items(uri, tags) VALUES($1, $2)")
-        |> pog.parameter(pog.text(uri))
-        |> pog.parameter(pog.array(pog.int, tag_ids))
-        |> pog.execute(ctx.db)
+      let tag_ids = tag_id_rows |> list.map(fn(row) { row.id })
+
+      let insert_item_result = sql.insert_item(ctx.db, uri, tag_ids, now, now)
 
       case insert_item_result {
         Ok(_) -> wisp.ok() |> wisp.html_body("Done!")

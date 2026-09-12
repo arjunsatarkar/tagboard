@@ -8,7 +8,7 @@
         {{> sidebar . }}
         <main>
             <h1>Tagboard</h1>
-            <form action="/api/search">
+            <form action="/search">
                 <label>
                     Tags:
                     <input name="tags_string" />
@@ -16,6 +16,19 @@
                 <small>(space-separated)</small>
                 <br>
                 <button>Search</button>
+                <br>
+                (Note: an empty search matches all items.)
+            </form>
+            <br>
+            <form action="/api/item_by_uri">
+                Or, get a specific item by the URI it describes:
+                <br>
+                <label>
+                    URI:
+                    <input name="uri" required>
+                </label>
+                <br>
+                <button>Go</button>
             </form>
         </main>
     </body>

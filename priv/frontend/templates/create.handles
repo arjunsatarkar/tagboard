@@ -4,7 +4,7 @@
         {{> head_boilerplate . }}
         <title>Create | Tagboard</title>
     </head>
-    <body id="app">
+    <body>
         {{> sidebar . }}
         <main>
             <h1>Create</h1>

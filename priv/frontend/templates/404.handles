@@ -4,7 +4,7 @@
         {{> head_boilerplate .}}
         <title>Page Not Found</title>
     </head>
-    <body id="app">
+    <body>
         {{> sidebar . }}
         <main>
             Page not found.

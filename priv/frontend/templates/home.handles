@@ -20,12 +20,12 @@
                 (Note: an empty search matches all items.)
             </form>
             <br>
-            <form action="/api/item_by_uri">
-                Or, get a specific item by the URI it describes:
+            <form action="/search_by_uri">
+                Or, search by the item's URI:
                 <br>
                 <label>
-                    URI:
-                    <input name="uri" required>
+                    URI substring:
+                    <input name="uri_substring" required>
                 </label>
                 <br>
                 <button>Go</button>

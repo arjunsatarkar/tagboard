@@ -10,5 +10,6 @@ format:
     find priv/frontend -name '*.handles' -exec uvx djlint --reformat --warn {} +
     pg_format --inplace src/tagboard/sql/*.sql
 
-migrate:
+db_stuff:
     gleam run -m migrate
+    PGDATABASE=tagboard_dev gleam run -m squirrel

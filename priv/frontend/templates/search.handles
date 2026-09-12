@@ -2,6 +2,9 @@
 <html lang="en">
     <head>
         {{> head_boilerplate . }}
+        {{#if tags_param_present}}
+            <meta name="robots" content="noindex">
+        {{/if}}
         <title>Search | Tagboard</title>
     </head>
     <body>

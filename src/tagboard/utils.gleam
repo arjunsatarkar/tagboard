@@ -7,6 +7,7 @@ const tag_proto = "tagboard-tag:"
 pub fn parse_tags_string(tags_string: String) -> List(String) {
   tags_string
   |> string.split(" ")
+  |> list.filter(fn(s) { !string.is_empty(s) })
   |> list.map(string.lowercase)
   |> list.map(uri.percent_encode)
   |> list.map(fn(percent_encoded) { tag_proto <> percent_encoded })

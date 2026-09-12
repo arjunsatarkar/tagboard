@@ -155,7 +155,7 @@ pub fn search_by_tags(
 
   "SELECT
     items_outer.uri,
-    ARRAY(
+    ARRAY (
         SELECT
             items_inner.uri
         FROM

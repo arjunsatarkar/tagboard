@@ -54,12 +54,12 @@ fn search(req: Request, ctx: Context) -> Response {
 
   let query_params = wisp.get_query(req)
 
-  let tags =
-    case list.key_find(query_params, "tags_string") {
-      Ok(tags_string) -> tags_string
-      Error(_) -> ""
-    }
-    |> utils.parse_tags_string()
+  let #(tags, tags_param_present) = case
+    list.key_find(query_params, "tags_string")
+  {
+    Ok(tags_string) -> #(utils.parse_tags_string(tags_string), True)
+    Error(_) -> #([], False)
+  }
 
   let assert Ok(tag_ids_query_returned) = sql.get_tag_ids(ctx.db, tags)
   let tag_ids = tag_ids_query_returned.rows |> list.map(fn(row) { row.id })
@@ -85,6 +85,10 @@ fn search(req: Request, ctx: Context) -> Response {
       search_template,
       handles_ctx.Dict([
         handles_ctx.Prop("matching_item", matching_items_handles),
+        handles_ctx.Prop(
+          "tags_param_present",
+          handles_ctx.Bool(tags_param_present),
+        ),
       ]),
       ctx.partials,
     )

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {{> head_boilerplate . }}
+        <meta name="robots" content="noindex">
+        <title>Search by URI | Tagboard</title>
+    </head>
+    <body>
+        {{> sidebar . }}
+        <main>
+            <h1>Results - search by URI</h1>
+            {{#if exact_match_present}}
+                <h2>Exact match</h2>
+                <a href="{{ exact_match.uri }}">{{ exact_match.uri }}</a>
+                <br>
+                <code>{{ exact_match.tags_string }}</code>
+            {{/if}}
+            <h2>Containing matches</h2>
+            <ol>
+                {{#each containing_match}}
+                    <li>
+                        <a href="{{ uri }}">{{ uri }}</a>
+                        <br>
+                        <code>{{ tags_string }}</code>
+                    </li>
+                {{/each}}
+            </ol>
+        </main>
+    </body>
+</html>

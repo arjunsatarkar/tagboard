@@ -127,6 +127,102 @@ INSERT INTO items (uri, created_at, modified_at)
   |> pog.execute(db)
 }
 
+/// A row you get from running the `search_by_contains_uri` query
+/// defined in `./src/tagboard/sql/search_by_contains_uri.sql`.
+///
+/// > 🐿️ This type definition was generated automatically using v4.7.0 of the
+/// > [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub type SearchByContainsUriRow {
+  SearchByContainsUriRow(uri: String, array: List(String))
+}
+
+/// Runs the `search_by_contains_uri` query
+/// defined in `./src/tagboard/sql/search_by_contains_uri.sql`.
+///
+/// > 🐿️ This function was generated automatically using v4.7.0 of
+/// > the [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub fn search_by_contains_uri(
+  db: pog.Connection,
+  arg_1: String,
+) -> Result(pog.Returned(SearchByContainsUriRow), pog.QueryError) {
+  let decoder = {
+    use uri <- decode.field(0, decode.string)
+    use array <- decode.field(1, decode.list(decode.string))
+    decode.success(SearchByContainsUriRow(uri:, array:))
+  }
+
+  "SELECT
+    items_outer.uri,
+    ARRAY (
+        SELECT
+            items_inner.uri
+        FROM
+            items items_inner
+        WHERE
+            items_inner.id = ANY (items_outer.tags))
+FROM
+    items items_outer
+WHERE
+    items_outer.uri ILIKE '%' || $1 || '%'
+ORDER BY
+    items_outer.created_at DESC
+LIMIT 100
+"
+  |> pog.query
+  |> pog.parameter(pog.text(arg_1))
+  |> pog.returning(decoder)
+  |> pog.execute(db)
+}
+
+/// A row you get from running the `search_by_exact_uri` query
+/// defined in `./src/tagboard/sql/search_by_exact_uri.sql`.
+///
+/// > 🐿️ This type definition was generated automatically using v4.7.0 of the
+/// > [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub type SearchByExactUriRow {
+  SearchByExactUriRow(array: List(String))
+}
+
+/// Runs the `search_by_exact_uri` query
+/// defined in `./src/tagboard/sql/search_by_exact_uri.sql`.
+///
+/// > 🐿️ This function was generated automatically using v4.7.0 of
+/// > the [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub fn search_by_exact_uri(
+  db: pog.Connection,
+  items_outer_uri: String,
+) -> Result(pog.Returned(SearchByExactUriRow), pog.QueryError) {
+  let decoder = {
+    use array <- decode.field(0, decode.list(decode.string))
+    decode.success(SearchByExactUriRow(array:))
+  }
+
+  "SELECT
+    ARRAY (
+        SELECT
+            items_inner.uri
+        FROM
+            items items_inner
+        WHERE
+            items_inner.id = ANY (items_outer.tags))
+FROM
+    items items_outer
+WHERE
+    items_outer.uri = $1
+ORDER BY
+    items_outer.created_at DESC
+LIMIT 1
+"
+  |> pog.query
+  |> pog.parameter(pog.text(items_outer_uri))
+  |> pog.returning(decoder)
+  |> pog.execute(db)
+}
+
 /// A row you get from running the `search_by_tags` query
 /// defined in `./src/tagboard/sql/search_by_tags.sql`.
 ///

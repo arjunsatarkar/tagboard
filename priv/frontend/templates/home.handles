@@ -24,9 +24,10 @@
                 Or, search by the item's URI:
                 <br>
                 <label>
-                    URI substring:
-                    <input name="uri_substring" required>
+                    URI:
+                    <input name="uri">
                 </label>
+                <small>(this searches for both exact and substring matches)</small>
                 <br>
                 <button>Go</button>
             </form>

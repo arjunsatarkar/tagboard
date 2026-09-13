@@ -10,7 +10,7 @@
     <body>
         {{> sidebar . }}
         <main>
-            <h1>Search</h1>
+            <h1>Results - search by tag</h1>
             <ol>
                 {{#each matching_item}}
                     <li>

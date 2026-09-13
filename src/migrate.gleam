@@ -24,8 +24,10 @@ pub fn main() {
     |> supervisor.start
 
   let db = pog.named_connection(pool_name)
-  // TODO: pog doesn't support TIMESTAMPTZ, its lead dev seems to think it's not
-  // necessary - verify if it's possible to always interpret TIMESTAMP as UTC
+
+  let assert Ok(_) =
+    pog.query("CREATE EXTENSION IF NOT EXISTS pg_trgm;") |> pog.execute(db)
+
   let assert Ok(_) =
     pog.query(
       "CREATE TABLE IF NOT EXISTS items (
@@ -37,9 +39,10 @@ pub fn main() {
        )",
     )
     |> pog.execute(db)
+
   let assert Ok(_) =
     pog.query(
-      "CREATE INDEX IF NOT EXISTS idx_gin__items__tags ON items USING gin(tags)",
+      "CREATE INDEX IF NOT EXISTS idx_gin__items__tags ON items USING GIN (tags)",
     )
     |> pog.execute(db)
 
@@ -52,6 +55,12 @@ pub fn main() {
   let assert Ok(_) =
     pog.query(
       "CREATE INDEX IF NOT EXISTS idx__items__modified_at ON items (modified_at)",
+    )
+    |> pog.execute(db)
+
+  let assert Ok(_) =
+    pog.query(
+      "CREATE INDEX IF NOT EXISTS idx_trgm__items__uri ON items USING GIN (uri gin_trgm_ops)",
     )
     |> pog.execute(db)
 }

@@ -2,6 +2,7 @@ import gleam/dict
 import gleam/http.{Get, Post}
 import gleam/list
 import gleam/result
+import gleam/string
 import gleam/string_tree
 import gleam/time/timestamp
 import handles
@@ -23,6 +24,7 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
     [] -> home(req, ctx)
     ["create"] -> create(req, ctx)
     ["search"] -> search(req, ctx)
+    ["search_by_uri"] -> search_by_uri(req, ctx)
 
     ["api", "create"] -> api_create(req, ctx)
     ["api", ..] -> wisp.not_found()
@@ -94,6 +96,95 @@ fn search(req: Request, ctx: Context) -> Response {
     )
   wisp.ok()
   |> wisp.html_body(string_tree.to_string(rendered))
+}
+
+fn search_by_uri(req: Request, ctx: Context) -> Response {
+  use <- wisp.require_method(req, Get)
+
+  let query_params = wisp.get_query(req)
+
+  let uri = case list.key_find(query_params, "uri") {
+    Ok(uri) -> uri
+    Error(Nil) -> ""
+  }
+
+  let escaped_uri =
+    uri
+    |> string.replace("\\", "\\\\")
+    |> string.replace("%", "\\%")
+    |> string.replace("_", "\\_")
+
+  let exact_search_result = {
+    use exact_search_returned <- result.try(sql.search_by_exact_uri(ctx.db, uri))
+    case exact_search_returned.rows {
+      [tags] -> Ok(#(True, tags.array))
+      _ -> Ok(#(False, []))
+    }
+  }
+
+  let contains_search_result = {
+    use contains_search_returned <- result.try(sql.search_by_contains_uri(
+      ctx.db,
+      escaped_uri,
+    ))
+    Ok(
+      contains_search_returned.rows
+      |> list.map(fn(row) { #(row.uri, row.array) }),
+    )
+  }
+
+  case exact_search_result, contains_search_result {
+    Ok(#(exact_match_present, exact_search_matched)),
+      Ok(contains_search_matched)
+    -> {
+      let assert Ok(template) = dict.get(ctx.templates, "search_by_uri")
+
+      let contains_search_matched_handles =
+        contains_search_matched
+        |> list.map(fn(row) {
+          let #(uri, tag_uris) = row
+          handles_ctx.Dict([
+            handles_ctx.Prop("uri", handles_ctx.Str(uri)),
+            handles_ctx.Prop(
+              "tags_string",
+              handles_ctx.Str(utils.create_tags_string_from_tag_uris(tag_uris)),
+            ),
+          ])
+        })
+        |> handles_ctx.List
+
+      let assert Ok(rendered) =
+        handles.run(
+          template,
+          handles_ctx.Dict([
+            handles_ctx.Prop(
+              "exact_match_present",
+              handles_ctx.Bool(exact_match_present),
+            ),
+            handles_ctx.Prop(
+              "exact_match",
+              handles_ctx.Dict([
+                handles_ctx.Prop("uri", handles_ctx.Str(uri)),
+                handles_ctx.Prop(
+                  "tags_string",
+                  handles_ctx.Str(utils.create_tags_string_from_tag_uris(
+                    exact_search_matched,
+                  )),
+                ),
+              ]),
+            ),
+            handles_ctx.Prop(
+              "containing_match",
+              contains_search_matched_handles,
+            ),
+          ]),
+          ctx.partials,
+        )
+      wisp.ok()
+      |> wisp.html_body(string_tree.to_string(rendered))
+    }
+    _, _ -> wisp.internal_server_error()
+  }
 }
 
 fn api_create(req: Request, ctx: Context) -> Response {
